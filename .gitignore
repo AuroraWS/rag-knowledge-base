@@ -5,9 +5,11 @@ __pycache__/
 dist/
 build/
 
-# 虚拟环境
+# 虚拟环境（不管用哪种工具）
 venv/
 .venv/
+env/
+.env/
 
 # 环境变量（含密钥）
 .env
@@ -20,6 +22,10 @@ models/
 # FAISS 索引
 faiss_index/*.index
 faiss_index/*.faiss
+
+# Conda
+.conda/
+conda-env/
 
 # IDE
 .vscode/
