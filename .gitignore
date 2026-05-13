@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# 虚拟环境
+venv/
+.venv/
+
+# 环境变量（含密钥）
+.env
+
+# 模型文件（太大，不提交）
+models/
+*.bin
+*.safetensors
+
+# FAISS 索引
+faiss_index/*.index
+faiss_index/*.faiss
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# Docker
+*.log
