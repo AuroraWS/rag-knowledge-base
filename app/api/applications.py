@@ -115,7 +115,7 @@ async def create_application(req: ApplicationCreate):
             if req.submit_date
             else date.today()
         ),
-        notes=req.notes,
+        notes=req.notes or "",
     )
     created = store.add(app)
     return {"message": "投递记录已创建", "data": created}

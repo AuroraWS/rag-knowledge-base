@@ -222,18 +222,10 @@ class JobScheduler:
     # ── WeChat Bot（占位） ────────────────────────
 
     async def _send_wechat_message(self, message: str) -> None:
-        """通过 WeChat bot 发送消息（占位实现）。
+        """通过 WeChat bot 发送消息。"""
+        from app.gateway.push import push_manager
 
-        TODO: 替换为真实的 WeChat/飞书 bot API 调用。
-        """
-        if not settings.wechat_appid or not settings.wechat_appsecret:
-            logger.info("[WeChat Bot 占位] 消息长度: %d 字符", len(message))
-            logger.debug("消息内容:\n%s", message)
-            return
-
-        # TODO: 实现真实的 WeChat bot 推送
-        # 参考: https://developer.work.weixin.qq.com/document/path/90236
-        logger.info("WeChat bot 推送（待实现）: appid=%s", settings.wechat_appid)
+        await push_manager.send("default_user", message)
 
     # ── 任务管理 ──────────────────────────────────
 
