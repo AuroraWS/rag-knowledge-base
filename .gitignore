@@ -40,3 +40,12 @@ Thumbs.db
 # Docker
 *.log
 .claude/settings.local.json
+
+# 本地运行时数据（含个人资料，不提交）
+data/
+
+# 设计文档（仅本地参考）
+需求规格说明书.md
+智能招聘助手v2-产品设计.md
+需求规格说明书.pdf
+智能招聘助手v2-产品设计.pdf
