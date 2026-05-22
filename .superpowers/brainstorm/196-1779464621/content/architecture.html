@@ -1,0 +1,70 @@
+<h2>智能招聘助手 MVP — 系统架构</h2>
+<p class="subtitle">方案二：填空 + 核心链路验证增强</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">🆕 Day 1 — 创建</div>
+    <div class="mockup-body" style="background:#fffaf0;padding:16px">
+      <strong style="color:#d97706">app/models/schema.py</strong>
+      <p style="margin:4px 0;font-size:13px">13 个 Pydantic 模型 — 所有模块的共享数据源</p>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">🆕 Day 3-4 — 创建</div>
+    <div class="mockup-body" style="background:#f0fdf4;padding:16px">
+      <strong style="color:#059669">app/gateway/</strong>
+      <p style="margin:4px 0;font-size:13px">wechat.py — iLink Bot webhook 适配器</p>
+      <p style="margin:4px 0;font-size:13px">router.py — 消息路由 (chatbot ↔ 命令)</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:20px">
+  <h3>✅ 已有模块 (修复适配，不动结构)</h3>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+  <div class="mockup">
+    <div class="mockup-header">API 路由层</div>
+    <div class="mockup-body" style="font-size:12px">
+      /api/command — 自然语言指令<br>
+      /api/applications — 投递CRUD<br>
+      /api/profile — 资料库<br>
+      /api/generate — 生成自我评价<br>
+      /api/recommend — 推荐
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">核心引擎</div>
+    <div class="mockup-body" style="font-size:12px">
+      RAG — embeddings, retriever, reranker, generator<br>
+      Agent — LangGraph workflow, APScheduler
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">存储层</div>
+    <div class="mockup-body" style="font-size:12px">
+      application_store — SQLite WAL<br>
+      profile_store — JSON<br>
+      memory_store — JSON
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">前端</div>
+    <div class="mockup-body" style="font-size:12px">
+      Gradio 5-tab: 资料库 / 投递 / 生成 / 准备 / 配置
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:20px">
+  <h3>数据流</h3>
+</div>
+<div class="mockup">
+  <div class="mockup-body" style="font-family:monospace;font-size:12px;line-height:2.2;padding:14px">
+    📄 文档 → DeepSeek API → 规则+LLM → profile_store.json<br>
+    💬 /api/command → LLM意图解析 → 分发执行 → SQLite / 生成器<br>
+    📊 投递CRUD → SQLite → 仪表盘统计 → 定时提醒<br>
+    🤖 WeChat → iLink webhook → gateway → 命令引擎 → 回复/推送
+  </div>
+</div>

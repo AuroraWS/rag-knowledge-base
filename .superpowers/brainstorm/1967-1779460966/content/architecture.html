@@ -1,0 +1,86 @@
+<h2>智能招聘助手 MVP — 系统架构</h2>
+<p class="subtitle">方案二：填空 + 核心链路验证增强</p>
+
+<div class="section">
+  <h3>三层架构</h3>
+</div>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">创建 (Day 1)</div>
+    <div class="mockup-body" style="background:#fffaf0;padding:16px">
+      <strong style="color:#d97706">🆕 app/models/schema.py</strong>
+      <p style="margin:4px 0;font-size:13px">PersonalInfo, Education, WorkExperience, Project, Certificate, Application, ApplicationStatus, StatusChange, FieldMemory, MatchResult, HealthResponse</p>
+      <p style="margin:4px 0;font-size:13px;color:#6b7280">所有模块依赖的 Pydantic 模型集中定义</p>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">创建 (Day 3-4)</div>
+    <div class="mockup-body" style="background:#f0fdf4;padding:16px">
+      <strong style="color:#059669">🆕 app/gateway/</strong>
+      <p style="margin:4px 0;font-size:13px">wechat.py — iLink Bot webhook 适配器</p>
+      <p style="margin:4px 0;font-size:13px">router.py — 消息路由 (chatbot ↔ 命令)</p>
+      <p style="margin:4px 0;font-size:13px;color:#6b7280">参考 Hermes 适配器模式的轻量 Python 网关</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:20px">
+  <h3>已有模块 (修复适配)</h3>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+  <div class="mockup">
+    <div class="mockup-header">✅ API 路由层 (5个路由)</div>
+    <div class="mockup-body">
+      <div style="font-size:13px">
+        <div style="margin:2px 0"><code>/api/command</code> — 自然语言指令</div>
+        <div style="margin:2px 0"><code>/api/applications</code> — 投递CRUD</div>
+        <div style="margin:2px 0"><code>/api/profile</code> — 资料库</div>
+        <div style="margin:2px 0"><code>/api/generate</code> — 生成自我评价/项目介绍</div>
+        <div style="margin:2px 0"><code>/api/recommend</code> — 推荐</div>
+      </div>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">✅ 核心引擎</div>
+    <div class="mockup-body">
+      <div style="font-size:13px">
+        <div style="margin:2px 0">RAG — embeddings, retriever, reranker, generator, pipeline</div>
+        <div style="margin:2px 0">Agent — workflow (LangGraph), scheduler (APScheduler)</div>
+      </div>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">✅ 存储层</div>
+    <div class="mockup-body">
+      <div style="font-size:13px">
+        <div style="margin:2px 0">application_store — SQLite (WAL mode)</div>
+        <div style="margin:2px 0">profile_store — JSON 文件</div>
+        <div style="margin:2px 0">memory_store — 字段记忆 JSON</div>
+      </div>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">✅ 前端</div>
+    <div class="mockup-body">
+      <div style="font-size:13px">
+        <div style="margin:2px 0">Gradio 5-tab 界面</div>
+        <div style="margin:2px 0">资料库 / 投递管理 / 生成工具 / 准备建议 / 配置</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:20px">
+  <h3>数据流</h3>
+</div>
+
+<div class="mockup">
+  <div class="mockup-body" style="font-family:monospace;font-size:12px;line-height:2;padding:16px">
+    📄 文档上传 → DeepSeek API 解析 → 规则+LLM提取 → profile_store.json<br>
+    💬 自然语言 "/api/command" → LLM意图解析 → 分发执行 → SQLite/生成器<br>
+    📊 投递管理 → SQLite CRUD → 仪表盘统计 → 定时检查提醒<br>
+    🤖 WeChat → iLink webhook → gateway/router → 命令引擎 → 回复/推送
+  </div>
+</div>
