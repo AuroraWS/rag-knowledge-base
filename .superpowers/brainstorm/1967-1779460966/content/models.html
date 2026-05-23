@@ -1,0 +1,85 @@
+<h2>app/models/schema.py — 数据模型 ER 图</h2>
+<p class="subtitle">13 个 Pydantic 模型，所有模块依赖的唯一数据源</p>
+
+<div class="section">
+  <h3>模型关系总览</h3>
+</div>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">📋 资料库模型组</div>
+    <div class="mockup-body" style="padding:12px">
+      <div style="margin-bottom:12px;border-left:3px solid #3b82f6;padding-left:10px">
+        <strong>PersonalInfo</strong>
+        <div style="font-size:12px;color:#6b7280">name, phone, email, wechat, target_location, target_salary, earliest_start_date, id_number, birthday, gender, residence, source_files</div>
+      </div>
+      <div style="margin-bottom:12px;border-left:3px solid #3b82f6;padding-left:10px">
+        <strong>Education</strong> (list)
+        <div style="font-size:12px;color:#6b7280">school, degree, major, start_date, end_date, gpa, degree_cert_number, is_overseas, source_file</div>
+      </div>
+      <div style="margin-bottom:12px;border-left:3px solid #3b82f6;padding-left:10px">
+        <strong>WorkExperience</strong> (list)
+        <div style="font-size:12px;color:#6b7280">company, department, title, start_date, end_date, responsibilities[], achievements[], tech_stack[], source_file</div>
+      </div>
+      <div style="margin-bottom:12px;border-left:3px solid #3b82f6;padding-left:10px">
+        <strong>Project</strong> (list)
+        <div style="font-size:12px;color:#6b7280">name, role, start_date, end_date, description, tech_stack[], highlights[], source_file</div>
+      </div>
+      <div style="border-left:3px solid #3b82f6;padding-left:10px">
+        <strong>Certificate</strong> (list)
+        <div style="font-size:12px;color:#6b7280">name, issuer, date, cert_number, source_file</div>
+      </div>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">📊 投递 & 记忆模型组</div>
+    <div class="mockup-body" style="padding:12px">
+      <div style="margin-bottom:16px;border-left:3px solid #059669;padding-left:10px">
+        <strong>ApplicationStatus</strong> (枚举)
+        <div style="font-size:12px;color:#6b7280">待投递 | 已投递待反馈 | 已收到笔试 | 面试中 | 已拒绝 | 已拿到Offer</div>
+      </div>
+      <div style="margin-bottom:16px;border-left:3px solid #059669;padding-left:10px">
+        <strong>StatusChange</strong> (嵌入)
+        <div style="font-size:12px;color:#6b7280">status, change_date, note</div>
+      </div>
+      <div style="margin-bottom:16px;border-left:3px solid #059669;padding-left:10px">
+        <strong>Application</strong> (中心实体)
+        <div style="font-size:12px;color:#6b7280">id, company, title, location, url, jd_text, channel, resume_version, cover_letter, submit_date, status, last_check, next_check, timeline[], notes, interview_date, prep_plan, job_id, jd_summary, next_action, next_action_date</div>
+      </div>
+      <div style="margin-bottom:16px;border-left:3px solid #8b5cf6;padding-left:10px">
+        <strong>FieldMemory</strong>
+        <div style="font-size:12px;color:#6b7280">field_key, field_label, value, first_seen, last_updated, source_context, confidence</div>
+      </div>
+      <div style="border-left:3px solid #8b5cf6;padding-left:10px">
+        <strong>MatchResult</strong>
+        <div style="font-size:12px;color:#6b7280">score, skill_matches[], skill_gaps[], summary, recommendations[]</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:20px">
+  <h3>模型被谁使用</h3>
+</div>
+
+<div class="mockup">
+  <div class="mockup-body" style="padding:14px;font-size:13px">
+    <table style="width:100%;border-collapse:collapse">
+      <tr style="background:#f3f4f6"><th style="text-align:left;padding:6px 10px">使用者 (13个文件)</th><th style="text-align:left;padding:6px 10px">依赖的模型</th></tr>
+      <tr><td style="padding:6px 10px">main.py</td><td>HealthResponse</td></tr>
+      <tr><td style="padding:6px 10px">api/command.py</td><td>Application, ApplicationStatus</td></tr>
+      <tr><td style="padding:6px 10px">api/applications.py</td><td>Application, ApplicationStatus</td></tr>
+      <tr><td style="padding:6px 10px">api/profile.py</td><td>PersonalInfo, Education, WorkExperience, Project, Certificate</td></tr>
+      <tr><td style="padding:6px 10px">api/generate.py</td><td>Project</td></tr>
+      <tr><td style="padding:6px 10px">api/recommend.py</td><td>MatchResult</td></tr>
+      <tr><td style="padding:6px 10px">storage/application_store.py</td><td>Application, ApplicationStatus, StatusChange</td></tr>
+      <tr><td style="padding:6px 10px">storage/profile_store.py</td><td>PersonalInfo, Education, WorkExperience, Project, Certificate</td></tr>
+      <tr><td style="padding:6px 10px">storage/memory_store.py</td><td>FieldMemory</td></tr>
+      <tr><td style="padding:6px 10px">services/extraction_service.py</td><td>PersonalInfo, Education, WorkExperience, Project, Certificate</td></tr>
+      <tr><td style="padding:6px 10px">services/tracking_service.py</td><td>Application, ApplicationStatus</td></tr>
+      <tr><td style="padding:6px 10px">services/preparation_service.py</td><td>MatchResult</td></tr>
+      <tr><td style="padding:6px 10px">rag/pipeline.py</td><td>MatchResult</td></tr>
+      <tr><td style="padding:6px 10px">agent/workflow.py</td><td>Application, ApplicationStatus, MatchResult</td></tr>
+    </table>
+  </div>
+</div>

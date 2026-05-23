@@ -64,3 +64,56 @@ app/
 ## Model storage
 
 Models cache to the default `sentence-transformers` cache dir (~/.cache/torch/sentence_transformers). FAISS indexes and source documents are excluded from git (`.gitignore`).
+
+## gstack
+
+Use the `/browse` skill from gstack for all web browsing.
+Never use `mcp__claude-in-chrome__*` tools.
+
+### Available skills
+| Skill | Description |
+|---|---|
+| `/office-hours` | Startup diagnostic + builder brainstorm |
+| `/plan-ceo-review` | Strategy/scope review |
+| `/plan-eng-review` | Architecture/engineering plan review |
+| `/plan-design-review` | Design plan review (report-only) |
+| `/design-consultation` | Design system from scratch |
+| `/design-shotgun` | Visual design exploration |
+| `/design-html` | HTML design generation |
+| `/design-review` | Visual polish + fix loop |
+| `/review` | PR code review |
+| `/ship` | Ship workflow (merge + deploy) |
+| `/land-and-deploy` | Merge → deploy → canary verify |
+| `/canary` | Post-deploy monitoring loop |
+| `/benchmark` | Performance regression detection |
+| `/browse` | Headless browser (Playwright) |
+| `/connect-chrome` | Launch GStack Browser |
+| `/qa` | QA testing + fix loop |
+| `/qa-only` | Report-only QA |
+| `/setup-browser-cookies` | Browser cookie setup |
+| `/setup-deploy` | One-time deploy config |
+| `/setup-gbrain` | GBrain setup |
+| `/retro` | Retrospective |
+| `/investigate` | Systematic root-cause debugging |
+| `/document-release` | Post-ship doc updates |
+| `/document-generate` | Diataxis doc generator |
+| `/codex` | Multi-AI second opinion |
+| `/cso` | OWASP Top 10 + STRIDE security audit |
+| `/autoplan` | Auto-review pipeline (CEO → design → eng) |
+| `/plan-devex-review` | Developer experience review |
+| `/devex-review` | Developer experience audit |
+| `/careful` | Careful/safe mode |
+| `/freeze` | Freeze mode |
+| `/guard` | Guard mode |
+| `/unfreeze` | Unfreeze mode |
+| `/gstack-upgrade` | Upgrade gstack |
+| `/learn` | Learning/tutorial mode |
+
+### How teammates install gstack
+1. Download `https://github.com/garrytan/gstack/archive/refs/heads/main.zip`
+2. Extract to `%USERPROFILE%\.claude\skills\gstack` (strip the `-main` suffix)
+3. Run in that directory:
+   ```bash
+   bun install && bun run build && bunx playwright install chromium
+   ```
+4. If on Windows without Git Bash, run these steps manually (see team setup guide).

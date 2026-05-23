@@ -48,6 +48,38 @@ async def health():
     return HealthResponse(version="2.0.0")
 
 
+# ── WeChat Bot Webhook ──────────────────────────
+
+
+from app.gateway.wechat import wechat_adapter
+from app.gateway.router import message_router
+from fastapi import Request, Response
+
+
+@app.get("/api/wechat/webhook")
+async def wechat_verify(signature: str, timestamp: str, nonce: str, echostr: str):
+    """微信服务器首次接入验证（GET请求）。"""
+    result = wechat_adapter.verify_signature(signature, timestamp, nonce, echostr)
+    return Response(content=result if isinstance(result, str) else str(result))
+
+
+@app.post("/api/wechat/webhook")
+async def wechat_receive(request: Request):
+    """接收微信消息推送（POST请求）。"""
+    body = await request.body()
+    xml_data = body.decode("utf-8")
+
+    msg = wechat_adapter.parse_message(xml_data)
+    reply_text = await message_router.route(msg)
+
+    reply_xml = wechat_adapter.build_reply(
+        to_user=msg.from_user,
+        from_user=msg.raw.get("to_user", "gh_default"),
+        content=reply_text,
+    )
+    return Response(content=reply_xml, media_type="application/xml")
+
+
 # ── 启动事件 ──────────────────────────────────────
 
 

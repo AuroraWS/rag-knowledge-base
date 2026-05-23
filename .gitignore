@@ -15,7 +15,7 @@ env/
 .env
 
 # 模型文件（太大，不提交）
-models/
+/models/
 *.bin
 *.safetensors
 
