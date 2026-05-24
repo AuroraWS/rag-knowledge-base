@@ -5,10 +5,15 @@
 1. BM25 (rank_bm25) 对文档做关键词匹配
 2. FAISS (IndexFlatIP) 对文档做向量相似度检索
 3. RRF (Reciprocal Rank Fusion, k=60) 融合两路分数
+
+持久化:
+- build_index() 后自动保存 FAISS 索引 + 文档元数据到 data/faiss_index/
+- 下次启动时可通过 try_load_from_disk() 自动恢复，无需重建
 """
 
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 from typing import Any, Optional
@@ -22,6 +27,10 @@ logger = logging.getLogger(__name__)
 
 # RRF 常数
 RRF_K = 60
+
+# 持久化文件名
+_INDEX_FILE = "faiss.index"
+_DOCS_FILE = "documents.json"
 
 
 class DualRetriever:
@@ -69,11 +78,12 @@ class DualRetriever:
         self._documents.clear()
         self._bm25 = None
         self._index = None
+        self._remove_persisted()
 
     # ── 索引构建 ─────────────────────────────────────────
 
     def build_index(self) -> None:
-        """基于当前所有文档构建 BM25 + FAISS 索引"""
+        """基于当前所有文档构建 BM25 + FAISS 索引，构建后自动持久化。"""
         if not self._documents:
             logger.warning("没有文档可建索引")
             return
@@ -88,6 +98,9 @@ class DualRetriever:
         embeddings = self._embedding_model.encode_documents(texts)
         self._index = self._build_faiss_index(embeddings)
         logger.info("FAISS 索引构建完成 (类型: %s)", self._index_type)
+
+        # ── 持久化到磁盘 ──────────────────────────────
+        self._persist()
 
     def _build_faiss_index(self, embeddings: np.ndarray):
         """根据配置构建 FAISS 索引，支持 Flat / HNSW / IVF / HNSW_PQ。
@@ -281,7 +294,7 @@ class DualRetriever:
         ]
 
     def save_index(self, path: str) -> None:
-        """保存 FAISS 索引到磁盘"""
+        """保存 FAISS 索引到指定路径"""
         import faiss
         if self._index is not None:
             Path(path).parent.mkdir(parents=True, exist_ok=True)
@@ -289,13 +302,95 @@ class DualRetriever:
             logger.info("FAISS 索引已保存到 %s", path)
 
     def load_index(self, path: str) -> None:
-        """从磁盘加载 FAISS 索引"""
+        """从指定路径加载 FAISS 索引"""
         import faiss
         p = Path(path)
         if p.exists():
             self._index = faiss.read_index(str(p))
             self._dim = self._index.d
             logger.info("FAISS 索引已从 %s 加载（维度: %d）", path, self._dim)
+
+    # ── 自动持久化 ──────────────────────────────────────
+
+    @property
+    def _persist_dir(self) -> Path:
+        return Path(settings.faiss_index_dir)
+
+    def _persist(self) -> None:
+        """自动保存 FAISS 索引 + 文档元数据到配置的目录。"""
+        import faiss
+
+        index_dir = self._persist_dir
+        index_dir.mkdir(parents=True, exist_ok=True)
+
+        # 保存 FAISS 索引
+        if self._index is not None:
+            faiss.write_index(self._index, str(index_dir / _INDEX_FILE))
+            logger.info("FAISS 索引已持久化 (%d 篇文档, 类型: %s)", len(self._documents), self._index_type)
+
+        # 保存文档元数据（text + metadata，BM25 重建需要）
+        docs_path = index_dir / _DOCS_FILE
+        with open(docs_path, "w", encoding="utf-8") as f:
+            json.dump(self._documents, f, ensure_ascii=False, indent=2)
+        logger.info("文档元数据已持久化 (%d 条)", len(self._documents))
+
+    def _remove_persisted(self) -> None:
+        """删除磁盘上的持久化文件。"""
+        import os
+        index_dir = self._persist_dir
+        for fname in (_INDEX_FILE, _DOCS_FILE):
+            fp = index_dir / fname
+            try:
+                os.remove(fp)
+            except OSError:
+                pass
+
+    def try_load_from_disk(self) -> bool:
+        """尝试从磁盘加载之前持久化的索引和文档。
+
+        加载内容: FAISS 索引 + 文档元数据，然后重建 BM25。
+
+        Returns:
+            True 表示成功加载，False 表示无持久化数据。
+        """
+        import faiss
+
+        index_dir = self._persist_dir
+        index_path = index_dir / _INDEX_FILE
+        docs_path = index_dir / _DOCS_FILE
+
+        if not index_path.exists() or not docs_path.exists():
+            logger.info("未找到持久化索引，将从头构建")
+            return False
+
+        try:
+            # 1. 加载 FAISS 索引
+            self._index = faiss.read_index(str(index_path))
+            self._dim = self._index.d
+
+            # 2. 加载文档元数据
+            with open(docs_path, "r", encoding="utf-8") as f:
+                self._documents = json.load(f)
+
+            # 3. 重建 BM25（从文档文本）
+            if self._documents:
+                texts = [d["text"] for d in self._documents]
+                self._build_bm25(texts)
+                self._index_type = settings.faiss_index_type  # 恢复类型标记
+
+            logger.info(
+                "从磁盘恢复索引完成: %d 篇文档, 维度: %d",
+                len(self._documents), self._dim,
+            )
+            return True
+
+        except Exception as e:
+            logger.warning("加载持久化索引失败: %s，将重建", e)
+            self._documents = []
+            self._bm25 = None
+            self._index = None
+            self._dim = None
+            return False
 
     def __repr__(self) -> str:
         bm25_status = "built" if self._bm25 is not None else "none"

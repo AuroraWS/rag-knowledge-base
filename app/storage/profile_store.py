@@ -316,6 +316,20 @@ class ProfileStore:
             "certificates": self.get_certificates(),
         }
 
+    # ── 元数据/提取追踪 ─────────────────────────────
+
+    def get_metadata(self, key: str, default: Any = None) -> Any:
+        """获取元数据字段。"""
+        data = self._load()
+        meta = data.get("_metadata", {})
+        return meta.get(key, default)
+
+    def set_metadata(self, key: str, value: Any) -> None:
+        """设置元数据字段并持久化。"""
+        data = self._load()
+        data.setdefault("_metadata", {})[key] = value
+        self._save()
+
 
 # 模块级单例
 profile_store = ProfileStore()

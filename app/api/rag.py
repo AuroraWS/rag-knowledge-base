@@ -43,6 +43,9 @@ def get_pipeline():
         from app.rag.pipeline import RAGPipeline
 
         _pipeline = RAGPipeline()
+        # 尝试从磁盘恢复之前持久化的索引（避免重启后重建）
+        if not _pipeline.retriever.try_load_from_disk():
+            logger.info("未找到持久化索引，需通过 POST /api/rag/documents/import 导入文档")
     return _pipeline
 
 
@@ -92,10 +95,21 @@ async def import_documents(
     files: list[UploadFile] = File(..., description="支持 PDF/DOCX/MD/TXT 格式"),
     chunk_size: int = Form(default=500, ge=100, le=2000),
     chunk_overlap: int = Form(default=50, ge=0, le=500),
+    doc_type: str = Form(default="auto", description="文档类型: auto(自动检测) / contract / regulation / faq / resume / general"),
 ):
-    """上传文档文件，自动解析、切分、嵌入并建立检索索引。"""
+    """上传文档文件，自动解析、切分、嵌入并建立检索索引。
+
+    支持 5 种切分策略：
+    - contract:   按条款编号切（第X条）
+    - regulation: 按法规条/款切（双层）
+    - faq:        按问答对切
+    - resume:     按简历模块切（教育/工作/项目）
+    - general:    通用递归切分
+    - auto:       自动检测文档类型
+    """
     pipeline = get_pipeline()
 
+    resolved_doc_type = None if doc_type == "auto" else doc_type
     saved_count = 0
     imported_files = 0
 
@@ -124,8 +138,13 @@ async def import_documents(
                 logger.warning("加载文件 %s 失败: %s", file.filename, e)
                 continue
 
-            # 切分
-            chunks = chunk_documents(docs, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+            # 切分（传入文档类型）
+            chunks = chunk_documents(
+                docs,
+                doc_type=resolved_doc_type,
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap,
+            )
             dict_docs = [
                 {"text": chunk.page_content, "metadata": chunk.metadata}
                 for chunk in chunks
@@ -133,7 +152,7 @@ async def import_documents(
             pipeline.add_documents(dict_docs)
             saved_count += len(dict_docs)
 
-    # 重建索引
+    # 重建索引（自动持久化）
     pipeline.build_index()
 
     return {

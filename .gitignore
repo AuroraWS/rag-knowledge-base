@@ -42,7 +42,7 @@ Thumbs.db
 .claude/settings.local.json
 
 # 本地运行时数据（含个人资料，不提交）
-data/
+/data/
 
 # 设计文档（仅本地参考）
 需求规格说明书.md

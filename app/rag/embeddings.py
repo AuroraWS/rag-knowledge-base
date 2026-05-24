@@ -58,18 +58,78 @@ class EmbeddingModel:
         if self._model is not None:
             return self._model
 
+        import os
+        from pathlib import Path
         from sentence_transformers import SentenceTransformer
 
-        cache_folder = str(Path(settings.embedding_model).parent)
-        logger.info("加载 embedding 模型: %s (cache: %s)", self._model_name, cache_folder)
-        self._model = SentenceTransformer(
-            self._model_name,
-            cache_folder=cache_folder,
-            local_files_only=True,  # 优先使用本地缓存
-        )
+        # 如果配置了 HF 镜像，设置环境变量
+        if settings.hf_endpoint:
+            os.environ.setdefault("HF_ENDPOINT", settings.hf_endpoint)
+
+        logger.info("加载 embedding 模型: %s (local_only=%s)", self._model_name, settings.local_files_only)
+        try:
+            self._model = SentenceTransformer(
+                self._model_name,
+                local_files_only=settings.local_files_only,
+            )
+        except TypeError as e:
+            # sentence_transformers 5.x 与旧模型格式不兼容时，尝试修补 Pooling 配置
+            if "Pooling" not in str(e):
+                raise
+            logger.warning("模型加载失败（Pooling 配置缺失），尝试自动修补: %s", e)
+            self._patch_pooling_config()
+            self._model = SentenceTransformer(
+                self._model_name,
+                local_files_only=True,
+            )
         self._dim = self._model.get_sentence_embedding_dimension()
         logger.info("embedding 模型加载完成, 维度: %d", self._dim)
         return self._model
+
+    def _patch_pooling_config(self):
+        """为旧格式模型创建缺失的 1_Pooling/config.json。
+
+        sentence_transformers >= 5.x 要求 Pooling 模块配置文件包含
+        word_embedding_dimension 字段，但旧版模型（v2.x）没有该文件。
+        """
+        import json
+        from huggingface_hub import try_to_load_from_cache
+
+        # 从缓存中查找模型快照路径
+        from sentence_transformers.util.file_io import load_file_path
+        modules_path = load_file_path(
+            self._model_name, "modules.json", local_files_only=True
+        )
+        if modules_path is None:
+            logger.warning("无法从缓存中找到 modules.json，跳过 Pooling 配置修补")
+            return
+        snapshot_dir = Path(modules_path).parent
+        pooling_dir = snapshot_dir / "1_Pooling"
+        pooling_config = pooling_dir / "config.json"
+
+        if not pooling_config.exists():
+            # 从 transformer config 获取 hidden_size
+            from transformers import AutoConfig
+            transformer_config = AutoConfig.from_pretrained(
+                str(snapshot_dir), local_files_only=True
+            )
+            hidden_size = getattr(transformer_config, "hidden_size", 512)
+
+            pooling_dir.mkdir(parents=True, exist_ok=True)
+            pooling_config.write_text(
+                json.dumps({
+                    "word_embedding_dimension": hidden_size,
+                    "pooling_mode_cls_token": False,
+                    "pooling_mode_mean_tokens": True,
+                    "pooling_mode_max_tokens": False,
+                    "pooling_mode_mean_sqrt_len_tokens": False,
+                    "pooling_mode_weightedmean_tokens": False,
+                    "pooling_mode_lasttoken": False,
+                    "include_prompt": True,
+                }),
+                encoding="utf-8",
+            )
+            logger.info("已创建 Pooling 配置文件: %s (dim=%d)", pooling_config, hidden_size)
 
     # ── 编码 ─────────────────────────────────────────────
 
@@ -77,6 +137,7 @@ class EmbeddingModel:
         """批量编码文本，返回归一化后的嵌入矩阵 (n, dim)"""
         model = self._get_model()
         if not texts:
+            assert self._dim is not None
             return np.empty((0, self._dim), dtype=np.float32)
         embeddings = model.encode(
             texts,

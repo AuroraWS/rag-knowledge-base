@@ -35,12 +35,16 @@ class Reranker:
         if self._model is not None:
             return self._model
 
+        import os
         from sentence_transformers import CrossEncoder
 
-        logger.info("加载 reranker 模型: %s", self._model_name)
+        if settings.hf_endpoint:
+            os.environ.setdefault("HF_ENDPOINT", settings.hf_endpoint)
+
+        logger.info("加载 reranker 模型: %s (local_only=%s)", self._model_name, settings.local_files_only)
         self._model = CrossEncoder(
             self._model_name,
-            local_files_only=True,  # 优先使用本地缓存
+            local_files_only=settings.local_files_only,
         )
         logger.info("reranker 模型加载完成")
         return self._model

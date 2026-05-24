@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
 from typing import Any, Optional, Union
 
@@ -19,6 +20,26 @@ import httpx
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _safe_json_parse(content: str) -> dict[str, Any]:
+    """安全解析 LLM 返回的 JSON——处理被 markdown 代码块包裹的情况。
+
+    LLM 有时不遵守"不要输出代码块"的指令，会返回:
+        ```json
+        {"key": "value"}
+        ```
+    或:
+        ```{"key": "value"}```
+    """
+    content = content.strip()
+    # 去掉 markdown 代码块包裹
+    if content.startswith("```"):
+        # 移除开头的 ```json 或 ```
+        content = re.sub(r"^```(?:json)?\s*", "", content)
+        # 移除结尾的 ```
+        content = re.sub(r"\s*```$", "", content)
+    return json.loads(content)
 
 
 class LLMGenerator:
@@ -260,7 +281,7 @@ class LLMGenerator:
         )
 
         content = data["choices"][0]["message"]["content"].strip()
-        result = json.loads(content)
+        result = _safe_json_parse(content)
 
         if response_model is not None:
             return response_model.model_validate(result)

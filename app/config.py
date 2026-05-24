@@ -7,6 +7,8 @@
 
 from __future__ import annotations
 
+import os
+
 from pydantic_settings import BaseSettings
 
 
@@ -20,6 +22,8 @@ class Settings(BaseSettings):
     # ── Embedding & Reranker ─────────────────────────
     embedding_model: str = "BAAI/bge-small-zh-v1.5"
     reranker_model: str = "BAAI/bge-reranker-v2-m3"
+    local_files_only: bool = False             # True=仅用本地缓存，不联网下载
+    hf_endpoint: str = ""                      # HF 镜像（如 https://hf-mirror.com），留空用官方
 
     # ── 服务 ─────────────────────────────────────────
     host: str = "0.0.0.0"
@@ -66,3 +70,7 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# 尽早设置 HF 镜像，避免被 huggingface_hub 缓存旧值
+if settings.hf_endpoint:
+    os.environ["HF_ENDPOINT"] = settings.hf_endpoint

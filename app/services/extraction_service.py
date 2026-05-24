@@ -102,59 +102,44 @@ class ExtractionService:
     async def extract_from_pdf(self, file_path: str) -> dict[str, Any]:
         """从 PDF 文件中提取结构化简历信息。
 
+        使用统一的 PDFParser 管线：pymupdf 文本提取 → DeepSeek LLM 结构化。
+
         Args:
             file_path: PDF 文件路径。
 
         Returns:
             包含 personal_info, education, work_experience, projects, certificates 的字典。
-            每个字段为 Pydantic 模型或模型列表。
         """
+        from app.data.pdf_parser import pdf_parser
+
         path = Path(file_path)
         if not path.exists():
             raise FileNotFoundError(f"PDF 文件不存在: {file_path}")
         if path.suffix.lower() != ".pdf":
             raise ValueError(f"不是 PDF 文件: {file_path}")
 
-        # Step 1: 使用 PyMuPDF 提取文本
-        text = self._extract_text_pymupdf(str(path))
-
-        if not text.strip():
-            logger.warning("PyMuPDF 未提取到文本，尝试备用提取: %s", file_path)
-            text = self._extract_text_fallback(str(path))
-
+        # Step 1: 统一的 PDF → 文本（pymupdf）
+        text = pdf_parser.extract_text(str(path))
         if not text.strip():
             raise ValueError(f"无法从 PDF 提取文本: {file_path}")
 
-        # Step 2: LLM 结构化解析
+        # Step 2: DeepSeek LLM 结构化解析
+        return await self.extract_from_text(text)
+
+    async def extract_from_text(self, text: str) -> dict[str, Any]:
+        """从纯文本中提取结构化简历信息。
+
+        这是核心的"DeepSeek 解析"环节——将非结构化文本转为结构化 JSON。
+
+        Args:
+            text: 文档纯文本内容（如 PDF 提取的 text 或手动粘贴的文本）。
+
+        Returns:
+            包含 personal_info, education, work_experience, projects, certificates 的字典。
+        """
+        if not text.strip():
+            raise ValueError("文本内容为空")
         return await self._parse_with_llm(text)
-
-    def _extract_text_pymupdf(self, file_path: str) -> str:
-        """使用 PyMuPDF (fitz) 提取 PDF 文本。"""
-        try:
-            import fitz  # type: ignore[import-untyped]
-
-            doc = fitz.open(file_path)
-            pages = []
-            for page_num in range(len(doc)):
-                page = doc[page_num]
-                text = page.get_text()
-                pages.append(text)
-            doc.close()
-            return "\n\n".join(pages)
-        except ImportError:
-            logger.warning("PyMuPDF 未安装，跳过 PDF 文本提取")
-            return ""
-        except Exception as e:
-            logger.error("PyMuPDF 提取失败: %s", e)
-            return ""
-
-    def _extract_text_fallback(self, file_path: str) -> str:
-        """备用文本提取（纯文本文件或 python-docx）。"""
-        try:
-            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                return f.read()
-        except Exception:
-            return ""
 
     # ── 图片提取（占位） ─────────────────────────────
 
