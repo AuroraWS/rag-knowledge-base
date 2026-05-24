@@ -84,110 +84,85 @@ def _extract_skills_from_profile(profile: dict) -> set[str]:
     """从简历全量数据中提取技能关键词集合。"""
     skills: set[str] = set()
 
-    # 从个人信息中提取技能相关字段
-    personal = profile.get("personal_info")
-    if personal:
-        if hasattr(personal, "target_location"):
-            skills.update(personal.target_location if isinstance(personal.target_location, list) else [])
-
     # 从工作经历提取技术栈
     for work in profile.get("work_experience", []):
-        if hasattr(work, "tech_stack"):
-            skills.update(getattr(work, "tech_stack", []) or [])
-        if hasattr(work, "responsibilities"):
-            for r in getattr(work, "responsibilities", []) or []:
-                skills.add(r)
+        tech = getattr(work, "tech_stack", None)
+        if tech:
+            skills.update(str(t).lower() for t in tech)
 
     # 从项目经历提取技术栈
     for proj in profile.get("projects", []):
-        if hasattr(proj, "tech_stack"):
-            skills.update(getattr(proj, "tech_stack", []) or [])
-        if hasattr(proj, "highlights"):
-            for h in getattr(proj, "highlights", []) or []:
-                skills.add(h)
+        tech = getattr(proj, "tech_stack", None)
+        if tech:
+            skills.update(str(t).lower() for t in tech)
 
-    # 从教育经历提取专业相关信息
+    # 从教育经历提取专业 + 学位
     for edu in profile.get("education", []):
-        if hasattr(edu, "major") and getattr(edu, "major", None):
-            skills.add(getattr(edu, "major"))
+        major = getattr(edu, "major", None)
+        if major:
+            skills.add(str(major).lower())
+        degree = getattr(edu, "degree", None)
+        if degree:
+            skills.add(str(degree).lower())
 
-    return {s.lower() for s in skills if s}
+    return {s for s in skills if s and len(s) >= 2}
 
 
 def _compute_match(
     jd: Any, profile_skills: set[str], preferences: Optional[dict] = None
 ) -> JobRecommendation:
-    """计算一条 JD 与简历的匹配度，返回推荐结果。"""
-    # 提取 JD 关键词
-    raw_text = getattr(jd, "raw_text", "") or ""
-    jd_keywords = set(raw_text.lower().split())
+    """计算一条 JD 与简历的匹配度。
 
-    # 从 requirements 提取更多关键词
-    requirements_text = ""
+    使用子串匹配代替集合交集——因为中文文本无空格分隔，
+    .split() 会把整段文本当一个元素，导致交集永远为空。
+    """
+    raw_text = (getattr(jd, "raw_text", "") or "").lower()
+
+    # 拼合所有 JD 可检索文本（raw_text + requirements）
+    jd_search_text = raw_text
     for req in getattr(jd, "requirements", []) or []:
-        content = getattr(req, "content", "") or ""
-        requirements_text += content + " "
+        content = req if isinstance(req, str) else (getattr(req, "content", "") or "")
+        jd_search_text += " " + content.lower()
 
-    jd_keywords.update(requirements_text.lower().split())
+    # 子串匹配：每项 Profile 技能是否在 JD 文本中出现
+    matched = {skill for skill in profile_skills if skill.lower() in jd_search_text}
 
-    # 计算技能匹配
-    matched = profile_skills & jd_keywords
-    candidate_missing = jd_keywords - profile_skills
+    # JD 要求清单（结构化字段）
+    jd_requirements: list[str] = []
+    for req in getattr(jd, "requirements", []) or []:
+        if isinstance(req, str):
+            jd_requirements.append(req)
+        elif hasattr(req, "content"):
+            jd_requirements.append(getattr(req, "content", ""))
 
-    # 取 Top 缺失技能（最多 5 个最相关的）
-    skill_priority = [
-        "python",
-        "java",
-        "pytorch",
-        "tensorflow",
-        "rag",
-        "大模型",
-        "llm",
-        "agent",
-        "docker",
-        "kubernetes",
-        "fastapi",
-        "flask",
-        "spring",
-        "mysql",
-        "mongodb",
-        "redis",
-        "elasticsearch",
-        "faiss",
-        "bert",
-        "transformer",
-        "机器学习",
-        "深度学习",
-        "人工智能",
-        "计算机视觉",
-        "nlp",
-        "c++",
-        "go",
-        "rust",
-    ]
-    missing_ordered = [s for s in skill_priority if s in candidate_missing]
-    missing_ordered += sorted(candidate_missing - set(skill_priority))[:3]
+    # 缺失 = JD 要求中未被 Profile 技能子串匹配到的
+    missing = [req for req in jd_requirements if not any(
+        req.lower() in skill.lower() or skill.lower() in req.lower()
+        for skill in profile_skills
+    )]
 
-    # 计算匹配分数
-    if len(jd_keywords) == 0:
-        score = 0.0
+    # 匹配分数：基于 JD 要求命中率
+    if jd_requirements:
+        score = len(matched) / max(len(jd_requirements), 1)
+        score = min(1.0, score * 1.2)
+    elif profile_skills:
+        score = min(0.5, len(matched) * 0.1)
     else:
-        overlap_ratio = len(matched) / max(len(jd_keywords), 1)
-        score = min(1.0, overlap_ratio * 1.2)  # 略微缩放，更积极
+        score = 0.0
 
     # 偏好加权
     if preferences:
         target_location = preferences.get("target_location")
         if target_location:
-            jd_loc = getattr(jd, "location", "") or ""
+            jd_loc = (getattr(jd, "location", "") or "").lower()
             if isinstance(target_location, list) and any(
-                loc in jd_loc for loc in target_location
+                loc.lower() in jd_loc for loc in target_location
             ):
                 score = min(1.0, score + 0.1)
-            elif isinstance(target_location, str) and target_location in jd_loc:
+            elif isinstance(target_location, str) and target_location.lower() in jd_loc:
                 score = min(1.0, score + 0.1)
             else:
-                score = max(0.0, score - 0.1)
+                score = max(0.0, score - 0.05)
 
     # 构建推荐理由
     company = getattr(jd, "company", "") or ""
@@ -195,7 +170,8 @@ def _compute_match(
     location = getattr(jd, "location", "") or ""
 
     if len(matched) >= 3:
-        reason = f"简历技能与 {company} 的 {title} 岗位高度匹配，{len(matched)} 项技能重叠，非常推荐投递。"
+        top3 = sorted(matched)[:3]
+        reason = f"简历技能与 {company} 的 {title} 岗位高度匹配，{len(matched)} 项技能重叠（{', '.join(top3)}等），非常推荐投递。"
     elif len(matched) >= 1:
         reason = f"简历与 {company} 的 {title} 岗位有一定匹配度，关键技能 {', '.join(sorted(matched)[:3])} 已被覆盖。"
     else:
@@ -207,7 +183,7 @@ def _compute_match(
         location=location,
         match_score=round(score, 2),
         matched_skills=sorted(matched),
-        missing_skills=missing_ordered[:5],
+        missing_skills=missing[:5],
         reason=reason,
     )
 

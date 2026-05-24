@@ -53,6 +53,7 @@ def get_pipeline():
 
 
 class RagSearchRequest(BaseModel):
+    model_config = {"extra": "forbid"}
     query: str = Field(..., description="搜索查询")
     top_k: int = Field(default=5, ge=1, le=50, description="返回结果数量")
 
@@ -69,6 +70,7 @@ class RagSearchResponse(BaseModel):
 
 
 class RagQueryRequest(BaseModel):
+    model_config = {"extra": "forbid"}
     question: str = Field(..., description="用户问题")
     top_k: int = Field(default=5, ge=1, le=50)
     rerank_top_k: int = Field(default=3, ge=1, le=20)
@@ -122,10 +124,11 @@ async def import_documents(
 
         imported_files += 1
 
-        # 保存上传文件
+        # 保存上传文件（消毒文件名，防止路径穿越）
+        safe_name = Path(file.filename).name  # 去掉任何目录前缀
         docs_dir = Path(settings.docs_dir)
         docs_dir.mkdir(parents=True, exist_ok=True)
-        temp_path = docs_dir / file.filename
+        temp_path = docs_dir / safe_name
         content = await file.read()
         temp_path.write_bytes(content)
 

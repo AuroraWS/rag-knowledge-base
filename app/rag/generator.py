@@ -72,6 +72,11 @@ class LLMGenerator:
                 base_url=self._base_url,
                 timeout=httpx.Timeout(self._timeout),
                 follow_redirects=True,
+                limits=httpx.Limits(
+                    max_keepalive_connections=5,
+                    max_connections=20,
+                    keepalive_expiry=30.0,
+                ),
             )
         return self._client
 

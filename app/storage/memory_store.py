@@ -110,7 +110,10 @@ class MemoryStore:
             if memory.source_context:
                 existing.source_context = memory.source_context
             if memory.confidence is not None:
-                existing.confidence = max(existing.confidence, memory.confidence)
+                if existing.confidence is None:
+                    existing.confidence = memory.confidence
+                else:
+                    existing.confidence = max(existing.confidence, memory.confidence)
             if memory.field_label:
                 existing.field_label = memory.field_label
             result = existing

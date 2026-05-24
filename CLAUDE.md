@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-RAG-based enterprise knowledge base Q&A system. FastAPI backend + FAISS vector search + BGE embeddings/reranker + DeepSeek LLM + multi-agent collaboration.
+智能招聘助手 v2.0 — 求职 Agent 智能助手。FastAPI backend + FAISS vector search (Flat/HNSW/IVF/HNSW_PQ) + BM25 dual retrieval + BGE embeddings/reranker + DeepSeek LLM + LangGraph multi-agent。
 
-The project is in early skeleton stage — core routes are stubbed out and modules have docstrings describing planned content but no implementation yet.
+38 个 API 端点，Gradio 6 页面前端，45 个测试。核心链路：PDF 解析 → AI 提取简历 → RAG 检索增强生成 → 投递自然语言管理 → 岗位智能推荐。
 
 ## Commands
 
@@ -37,11 +37,15 @@ pytest
 
 ```
 app/
-├── main.py       # FastAPI entry — routes: /health (done), /rag/query (stubbed)
-├── config.py     # pydantic-settings from .env — DEEPSEEK_API_KEY, embedding/reranker models, top_k, dirs
-├── rag/          # Retrieval pipeline (embeddings, BM25+vector dual retrieval, reranker, generator, pipeline orchestration)
-├── agent/        # Multi-agent system (LangGraph/AutoGen workflow)
-└── data/         # Document ingestion: loader (PDF/Word/MD), chunker, FAISS indexer
+├── main.py       # FastAPI entry — 38 routes, CORS, WeChat webhook, startup init
+├── config.py     # pydantic-settings — LLM/embedding/reranker/FAISS/chunk/HF mirror
+├── api/          # 7 route modules: profile, rag, command, generate, applications, recommend
+├── rag/          # Retrieval pipeline: embeddings, retriever(BM25+FAISS+persist), reranker, generator(stream+JSON-safe), pipeline
+├── agent/        # Multi-agent: rag_agent(LangGraph 5-node), workflow(tracking+interview), scheduler(APScheduler)
+├── data/         # Document: loader(PDF/Word/MD/TXT), pdf_parser(pymupdf+DeepSeek), chunker(5 strategies), jd_data
+├── services/     # Business logic: extraction(general+LLM), generation, preparation, tracking
+├── storage/      # Persistence: profile_store(JSON), application_store(SQLite), memory_store(JSON)
+└── gateway/      # WeChat: wechat(adapter), router, push(placeholder)
 ```
 
 ## Configuration (.env)

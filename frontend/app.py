@@ -18,6 +18,20 @@ from typing import Any
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 TIMEOUT = httpx.Timeout(connect=5.0, read=60.0, write=10.0, pool=5.0)
 
+# 全局连接池 — 复用 TCP 连接，避免每次请求重建握手
+_HTTP_CLIENT: httpx.Client | None = None
+
+
+def _get_client() -> httpx.Client:
+    """获取或懒创建全局 httpx 连接池。"""
+    global _HTTP_CLIENT
+    if _HTTP_CLIENT is None or _HTTP_CLIENT.is_closed:
+        _HTTP_CLIENT = httpx.Client(
+            timeout=TIMEOUT,
+            limits=httpx.Limits(max_keepalive_connections=5, max_connections=20),
+        )
+    return _HTTP_CLIENT
+
 
 # ── 通用 HTTP 工具函数 ────────────────────────────
 
@@ -25,10 +39,9 @@ TIMEOUT = httpx.Timeout(connect=5.0, read=60.0, write=10.0, pool=5.0)
 def _get(path: str) -> dict:
     """向后端发送 GET 请求，返回 JSON 结果。"""
     try:
-        with httpx.Client(timeout=TIMEOUT) as client:
-            resp = client.get(f"{BACKEND_URL}{path}")
-            resp.raise_for_status()
-            return resp.json()
+        resp = _get_client().get(f"{BACKEND_URL}{path}")
+        resp.raise_for_status()
+        return resp.json()
     except httpx.ConnectError:
         raise RuntimeError(f"无法连接后端 ({BACKEND_URL})，请确认后端已启动: uvicorn app.main:app --reload")
 
@@ -36,10 +49,9 @@ def _get(path: str) -> dict:
 def _post(path: str, payload: dict | None) -> dict:
     """向后端发送 POST 请求，返回 JSON 结果。"""
     try:
-        with httpx.Client(timeout=TIMEOUT) as client:
-            resp = client.post(f"{BACKEND_URL}{path}", json=payload or {})
-            resp.raise_for_status()
-            return resp.json()
+        resp = _get_client().post(f"{BACKEND_URL}{path}", json=payload or {})
+        resp.raise_for_status()
+        return resp.json()
     except httpx.ConnectError:
         raise RuntimeError(f"无法连接后端 ({BACKEND_URL})，请确认后端已启动: uvicorn app.main:app --reload")
 
@@ -47,10 +59,9 @@ def _post(path: str, payload: dict | None) -> dict:
 def _put(path: str, payload: dict | None | None) -> dict:
     """向后端发送 PUT 请求，返回 JSON 结果。"""
     try:
-        with httpx.Client(timeout=TIMEOUT) as client:
-            resp = client.put(f"{BACKEND_URL}{path}", json=payload or {})
-            resp.raise_for_status()
-            return resp.json()
+        resp = _get_client().put(f"{BACKEND_URL}{path}", json=payload or {})
+        resp.raise_for_status()
+        return resp.json()
     except httpx.ConnectError:
         raise RuntimeError(f"无法连接后端 ({BACKEND_URL})，请确认后端已启动: uvicorn app.main:app --reload")
 
@@ -58,10 +69,9 @@ def _put(path: str, payload: dict | None | None) -> dict:
 def _delete(path: str) -> dict:
     """向后端发送 DELETE 请求，返回 JSON 结果。"""
     try:
-        with httpx.Client(timeout=TIMEOUT) as client:
-            resp = client.delete(f"{BACKEND_URL}{path}")
-            resp.raise_for_status()
-            return resp.json()
+        resp = _get_client().delete(f"{BACKEND_URL}{path}")
+        resp.raise_for_status()
+        return resp.json()
     except httpx.ConnectError:
         raise RuntimeError(f"无法连接后端 ({BACKEND_URL})，请确认后端已启动: uvicorn app.main:app --reload")
 
@@ -85,14 +95,13 @@ def upload_doc(file: Any) -> str:
     if file is None:
         return "请先选择文件"
     try:
-        with httpx.Client(timeout=TIMEOUT) as client:
-            with open(file.name, "rb") as f:
-                resp = client.post(
-                    f"{BACKEND_URL}/api/profile/upload",
-                    files={"file": (os.path.basename(file.name), f)},
-                )
-                resp.raise_for_status()
-                return json.dumps(resp.json(), ensure_ascii=False, indent=2)
+        with open(file.name, "rb") as f:
+            resp = _get_client().post(
+                f"{BACKEND_URL}/api/profile/upload",
+                files={"file": (os.path.basename(file.name), f)},
+            )
+            resp.raise_for_status()
+            return json.dumps(resp.json(), ensure_ascii=False, indent=2)
     except json.JSONDecodeError as e:
         return f"后端返回格式异常: {e}\n请查看后端终端日志"
     except Exception as e:
@@ -439,13 +448,18 @@ def rag_import_documents(files: list[Any]) -> str:
     if not files:
         return "请先选择文件（支持 PDF/DOCX/MD/TXT 格式）"
     try:
-        with httpx.Client(timeout=120.0) as client:
-            upload_files = []
-            for f in files:
-                upload_files.append(
-                    ("files", (os.path.basename(f.name), open(f.name, "rb")))
-                )
-            resp = client.post(f"{BACKEND_URL}/api/rag/documents/import", files=upload_files)
+        upload_files = []
+        opened = []
+        for f in files:
+            fh = open(f.name, "rb")
+            opened.append(fh)
+            upload_files.append(("files", (os.path.basename(f.name), fh)))
+        try:
+            resp = _get_client().post(
+                f"{BACKEND_URL}/api/rag/documents/import",
+                files=upload_files,
+                timeout=120.0,
+            )
             resp.raise_for_status()
             result = resp.json()
             return (
@@ -453,6 +467,9 @@ def rag_import_documents(files: list[Any]) -> str:
                 f"创建了 {result.get('chunks_created', 0)} 个文本块, "
                 f"知识库总计 {result.get('total_documents', 0)} 篇文档"
             )
+        finally:
+            for fh in opened:
+                fh.close()
     except Exception as e:
         return f"导入失败: {e}"
 
