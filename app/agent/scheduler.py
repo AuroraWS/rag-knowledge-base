@@ -57,7 +57,7 @@ class JobScheduler:
             logger.info("调度器已在运行中")
             return
 
-        self._scheduler = AsyncIOScheduler()
+        self._scheduler = AsyncIOScheduler() # type: ignore
         self._running = True
 
         # 注册定时任务
@@ -79,7 +79,7 @@ class JobScheduler:
         review_hour, review_min = self._parse_time(settings.schedule_review_time)
         self._scheduler.add_job(
             self._run_daily_review_job,
-            CronTrigger(hour=review_hour, minute=review_min),
+            CronTrigger(hour=review_hour, minute=review_min), # type: ignore
             id="daily_review",
             name="每日回顾推送",
             coalesce=True,
@@ -90,7 +90,7 @@ class JobScheduler:
         log_hour, log_min = self._parse_time(settings.daily_log_time)
         self._scheduler.add_job(
             self._run_daily_log_job,
-            CronTrigger(hour=log_hour, minute=log_min),
+            CronTrigger(hour=log_hour, minute=log_min),    # type: ignore
             id="daily_log",
             name="每日日志生成",
             coalesce=True,
@@ -246,7 +246,7 @@ class JobScheduler:
 
         self._scheduler.add_job(
             self._run_daily_review_job,
-            CronTrigger(hour=hour, minute=minute),
+            CronTrigger(hour=hour, minute=minute), # type: ignore
             id="daily_review",
             name="每日回顾推送",
             coalesce=True,
@@ -271,7 +271,7 @@ class JobScheduler:
 
         self._scheduler.add_job(
             self._run_daily_log_job,
-            CronTrigger(hour=hour, minute=minute),
+            CronTrigger(hour=hour, minute=minute), # type: ignore
             id="daily_log",
             name="每日日志生成",
             coalesce=True,

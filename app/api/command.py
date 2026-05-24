@@ -82,63 +82,63 @@ _INTENT_SYSTEM_PROMPT = """你是一个智能招聘助手的意图识别引擎�
 请严格按以下 JSON 格式输出，不要添加其他内容：
 
 对于"添加投递记录"（add_application）：
-{
+{{
     "intent": "add_application",
     "confidence": 0.95,
-    "params": {
+    "params": {{
         "company": "公司名称",
         "title": "岗位名称",
         "location": "工作地点（如未知则填空字符串）",
         "channel": "投递渠道（如未知则填'手动录入'）",
         "url": "",
         "jd_text": ""
-    }
-}
+    }}
+}}
 
 对于"更新状态"（update_status）：
-{
+{{
     "intent": "update_status",
     "confidence": 0.95,
-    "params": {
+    "params": {{
         "company": "公司名称（部分匹配用）",
         "title": "岗位名称（可选）",
         "new_status": "新状态（必须为：待投递/已投递待反馈/已收到笔试/面试中/已拒绝/已拿到Offer）",
         "note": "备注（可选）"
-    }
-}
+    }}
+}}
 
 对于"查询投递列表"（list_applications）：
-{
+{{
     "intent": "list_applications",
     "confidence": 0.95,
-    "params": {
+    "params": {{
         "filter_status": "可选的状态过滤（不限制则为null）"
-    }
-}
+    }}
+}}
 
 对于"生成自我介绍"（generate_self_intro）：
-{
+{{
     "intent": "generate_self_intro",
     "confidence": 0.95,
-    "params": {
+    "params": {{
         "jd_text": "JD内容（从用户输入中提取）"
-    }
-}
+    }}
+}}
 
 对于"查询简历"（query_profile）：
-{
+{{
     "intent": "query_profile",
     "confidence": 0.95,
-    "params": {}
-}
+    "params": {{}}
+}}
 
 如果无法识别意图：
-{
+{{
     "intent": "unknown",
     "confidence": 0.0,
-    "params": {},
+    "params": {{}},
     "error": "无法理解您的指令，请重新描述"
-}
+}}
 
 当前日期：{today}"""
 
