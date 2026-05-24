@@ -267,6 +267,79 @@ class LLMGenerator:
 
         return result
 
+    async def stream_generate(
+        self,
+        prompt: str,
+        system_prompt: str = "",
+        temperature: float = DEFAULT_TEMPERATURE,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+    ):
+        """流式文本生成（SSE），逐 token yield。
+
+        Usage:
+            async for token in generator.stream_generate("问题"):
+                print(token, end="")
+        """
+        await self._ensure_api_key()
+
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        payload = {
+            "model": self._model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "stream": True,
+        }
+        headers = {
+            "Authorization": f"Bearer {self._api_key}",
+            "Content-Type": "application/json",
+        }
+
+        client = await self._get_client()
+        last_error: Optional[Exception] = None
+
+        for attempt in range(1, self.MAX_RETRIES + 1):
+            try:
+                async with client.stream(
+                    "POST", "/chat/completions", json=payload, headers=headers
+                ) as response:
+                    response.raise_for_status()
+                    async for line in response.aiter_lines():
+                        if line.startswith("data: "):
+                            data_str = line[6:]
+                            if data_str == "[DONE]":
+                                return
+                            try:
+                                chunk = json.loads(data_str)
+                                delta = chunk.get("choices", [{}])[0].get("delta", {})
+                                content = delta.get("content", "")
+                                if content:
+                                    yield content
+                            except json.JSONDecodeError:
+                                continue
+                    return  # 正常结束
+
+            except httpx.TimeoutException as e:
+                last_error = e
+                logger.warning("流式 API 超时 (attempt %d/%d)", attempt, self.MAX_RETRIES)
+            except httpx.HTTPStatusError as e:
+                last_error = e
+                if 400 <= e.response.status_code < 500:
+                    raise
+            except httpx.RequestError as e:
+                last_error = e
+                logger.warning("流式网络错误 (attempt %d/%d)", attempt, self.MAX_RETRIES)
+
+            if attempt < self.MAX_RETRIES:
+                delay = self.RETRY_DELAY * (2 ** (attempt - 1))
+                time.sleep(delay)
+
+        raise RuntimeError(f"流式 API 调用在 {self.MAX_RETRIES} 次尝试后失败: {last_error}")
+
     async def __aenter__(self) -> "LLMGenerator":
         return self
 

@@ -1,0 +1,54 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+conda-meta/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project-specific
+*.log
+logs/
+.claude/
+.playwright-mcp/
+*.png
+*.jpg
+
+# Data (keep empty dirs structure, ignore large files)
+data/faiss_index/*
+data/docs/*
+!data/docs/.gitkeep
+!data/faiss_index/.gitkeep
+
+# Tests
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml

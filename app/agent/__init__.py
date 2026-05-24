@@ -6,7 +6,16 @@
 - workflow: LangGraph StateGraph 工作流定义
   - 投递跟踪工作流（Application Tracking Workflow）
   - 面试准备流程（Interview Prep Workflow）
+- rag_agent: RAG 多智能体编排
+  - 查询改写 / 多步检索规划 / 答案合成 / 护栏
 - scheduler: APScheduler 定时任务
   - 每日回顾推送（每天 09:30）
   - 每日日志生成（每天 22:00）
 """
+
+from app.agent.rag_agent import RAGAgentWorkflow, rag_agent_workflow
+
+__all__ = [
+    "RAGAgentWorkflow",
+    "rag_agent_workflow",
+]

@@ -21,16 +21,16 @@ WORKDIR /app
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# 复制项目代码（后端 + 前端）
+# 复制项目代码
 COPY app/ ./app/
 COPY frontend/ ./frontend/
 COPY data/ ./data/
 COPY scripts/ ./scripts/
+COPY .env ./
 
 # 暴露端口（后端: 8000, 前端 Gradio: 7860）
 EXPOSE 8000
 EXPOSE 7860
 
 # 默认启动后端服务
-# 前端可通过 `python frontend/app.py` 单独启动
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

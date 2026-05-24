@@ -1,0 +1,62 @@
+[
+  {
+    "text": "Python 是一种高级编程语言，以其简洁的语法和丰富的生态系统而闻名。它广泛应用于数据科学、机器学习、Web 开发和自动化运维等领域。常用的 Python 框架包括 Django、Flask、FastAPI 等。",
+    "metadata": {"source": "python_intro", "title": "Python编程语言概述"}
+  },
+  {
+    "text": "FAISS（Facebook AI Similarity Search）是 Facebook 开源的向量检索库。它支持多种索引类型，包括 Flat、IVF、HNSW 和 PQ（乘积量化）。FAISS 可以高效地在百万级甚至十亿级向量中进行近似最近邻搜索。",
+    "metadata": {"source": "faiss_docs", "title": "FAISS向量检索库"}
+  },
+  {
+    "text": "RAG（Retrieval Augmented Generation）是一种将检索系统与生成模型相结合的技术。它首先从知识库中检索相关文档，然后将这些文档作为上下文提供给大语言模型，帮助模型生成更准确、更可靠的回答。",
+    "metadata": {"source": "rag_paper", "title": "RAG技术综述"}
+  },
+  {
+    "text": "LangChain 是一个用于构建大语言模型应用的开源框架。它提供了链（Chains）、代理（Agents）、工具（Tools）和记忆（Memory）等核心抽象，帮助开发者快速构建复杂的 LLM 应用。",
+    "metadata": {"source": "langchain_docs", "title": "LangChain框架介绍"}
+  },
+  {
+    "text": "DeepSeek 是由深度求索公司开发的大语言模型系列。DeepSeek-V3 和 DeepSeek-R1 在多个基准测试中展现出优异的性能，支持 1M token 上下文窗口和多种推理能力。",
+    "metadata": {"source": "deepseek_intro", "title": "DeepSeek大语言模型"}
+  },
+  {
+    "text": "BM25 算法是一种基于概率检索模型的文本排序函数。它考虑了词频（TF）和逆文档频率（IDF），并引入了文档长度归一化，是信息检索领域最基本也最有效的算法之一。",
+    "metadata": {"source": "bm25_intro", "title": "BM25检索算法"}
+  },
+  {
+    "text": "HNSW（Hierarchical Navigable Small World）算法是一种图基近似最近邻搜索方法。它通过构建多层图结构来实现高效的搜索，在召回率和搜索速度之间取得了优秀的平衡。",
+    "metadata": {"source": "hnsw_paper", "title": "HNSW算法原理"}
+  },
+  {
+    "text": "乘积量化（Product Quantization，PQ）是一种向量压缩技术。它将高维向量分解为多个低维子向量，分别进行量化，可以大幅减少内存占用同时保持较好的搜索精度。",
+    "metadata": {"source": "pq_intro", "title": "乘积量化技术"}
+  },
+  {
+    "text": "BGE（BAAI General Embedding）是智源研究院开发的中文嵌入模型系列。bge-small-zh-v1.5 是其中轻量级的中文版本，支持 512 维向量输出，在中文语义搜索任务中表现优异。",
+    "metadata": {"source": "bge_intro", "title": "BGE嵌入模型"}
+  },
+  {
+    "text": "Sentence Transformers 是一个用于计算句子嵌入的 Python 库。它基于 HuggingFace Transformers 构建，支持多种预训练模型，可以方便地生成文本的向量表示。",
+    "metadata": {"source": "sbert_intro", "title": "Sentence Transformers库"}
+  },
+  {
+    "text": "FastAPI 是一个现代、快速的 Python Web 框架。它基于 Starlette 和 Pydantic，原生支持异步处理、自动生成 API 文档和类型校验。非常适合构建高性能的 RESTful API。",
+    "metadata": {"source": "fastapi_docs", "title": "FastAPI框架"}
+  },
+  {
+    "text": "Docker 是一个容器化平台，允许开发者将应用和依赖打包到轻量级、可移植的容器中。Docker Compose 可以定义和运行多容器 Docker 应用。",
+    "metadata": {"source": "docker_intro", "title": "Docker容器化"}
+  },
+  {
+    "text": "向量数据库是专门用于存储和检索向量嵌入的数据库系统。常见的向量数据库包括 Milvus、Pinecone、Weaviate 和 Chroma。FAISS 虽然不是数据库，但常被用作向量检索的核心引擎。",
+    "metadata": {"source": "vectordb_intro", "title": "向量数据库概述"}
+  },
+  {
+    "text": "Reranker（重排序模型）是 RAG 系统中的关键组件。它通过对初步检索结果进行二次排序来提高最终结果的相关性。常用的重排序模型包括 BGE-Reranker 和 Cohere Rerank。",
+    "metadata": {"source": "reranker_intro", "title": "重排序技术"}
+  },
+  {
+    "text": "语义分块是一种根据文本语义边界进行文档切分的方法。与固定长度切分不同，语义分块会在自然语义断点处切分文本，保持每个块内部信息的完整性。",
+    "metadata": {"source": "chunking_intro", "title": "语义分块策略"}
+  }
+]

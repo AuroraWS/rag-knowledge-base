@@ -30,7 +30,8 @@ class DualRetriever:
     def __init__(self, embedding_model: Optional[EmbeddingModel] = None):
         self._embedding_model = embedding_model or EmbeddingModel()
         self._bm25 = None  # rank_bm25.BM25Okapi
-        self._index = None  # faiss.IndexFlatIP
+        self._index = None  # faiss index (Flat / HNSW / IVF / HNSW_PQ)
+        self._index_type: str = "Flat"  # 实际使用的索引类型
         self._documents: list[dict[str, Any]] = []  # 原始文档 [{text, metadata}]
         self._dim: Optional[int] = None
 
@@ -77,19 +78,79 @@ class DualRetriever:
             logger.warning("没有文档可建索引")
             return
 
-        import faiss
-
         texts = [d["text"] for d in self._documents]
 
         # ── BM25 ───────────────────────────────────────
         self._build_bm25(texts)
 
         # ── FAISS ──────────────────────────────────────
-        logger.info("构建 FAISS 索引，维度: %d, 文档数: %d", self.dim, len(texts))
+        logger.info("构建 FAISS 索引，维度: %d, 文档数: %d, 类型: %s", self.dim, len(texts), settings.faiss_index_type)
         embeddings = self._embedding_model.encode_documents(texts)
-        self._index = faiss.IndexFlatIP(self.dim)
-        self._index.add(embeddings)
-        logger.info("FAISS 索引构建完成")
+        self._index = self._build_faiss_index(embeddings)
+        logger.info("FAISS 索引构建完成 (类型: %s)", self._index_type)
+
+    def _build_faiss_index(self, embeddings: np.ndarray):
+        """根据配置构建 FAISS 索引，支持 Flat / HNSW / IVF / HNSW_PQ。
+
+        训练类索引（IVF, HNSW_PQ）需要足够样本才能 train()，
+        样本不足或训练失败时自动回退到 IndexFlatIP。
+        """
+        import faiss
+
+        index_type = settings.faiss_index_type
+        dim = self.dim
+        n = embeddings.shape[0]
+
+        try:
+            if index_type == "HNSW":
+                index = faiss.IndexHNSWFlat(dim, settings.hnsw_m)
+                index.hnsw.efConstruction = settings.hnsw_ef_construction
+                index.hnsw.efSearch = settings.hnsw_ef_search
+                self._index_type = "HNSW"
+
+            elif index_type == "IVF":
+                quantizer = faiss.IndexFlatIP(dim)
+                index = faiss.IndexIVFFlat(quantizer, dim, settings.ivf_nlist, faiss.METRIC_INNER_PRODUCT)
+                if n >= settings.ivf_nlist:
+                    index.train(embeddings)
+                else:
+                    logger.warning("文档数 (%d) 少于 IVF 聚类数 (%d)，回退到 Flat", n, settings.ivf_nlist)
+                    index = faiss.IndexFlatIP(dim)
+                    self._index_type = "Flat"
+                    index.add(embeddings)
+                    return index
+                index.nprobe = settings.ivf_nprobe
+                self._index_type = "IVF"
+
+            elif index_type == "HNSW_PQ":
+                m = min(settings.hnsw_m, dim)  # HNSW M 不能超过 dim
+                index = faiss.IndexHNSWPQ(dim, m, dim // 4, 8)
+                index.hnsw.efConstruction = settings.hnsw_ef_construction
+                index.hnsw.efSearch = settings.hnsw_ef_search
+                if n >= 256:
+                    index.train(embeddings)
+                else:
+                    logger.warning("文档数 (%d) 不足以训练 HNSW_PQ (需 >= 256)，回退到 Flat", n)
+                    index = faiss.IndexFlatIP(dim)
+                    self._index_type = "Flat"
+                    index.add(embeddings)
+                    return index
+                self._index_type = "HNSW_PQ"
+
+            else:
+                # "Flat" 或其他未知值，默认暴力搜索
+                index = faiss.IndexFlatIP(dim)
+                self._index_type = "Flat"
+
+            index.add(embeddings)
+            return index
+
+        except (RuntimeError, ValueError) as e:
+            logger.warning("FAISS %s 索引创建失败: %s，回退到 Flat", index_type, e)
+            index = faiss.IndexFlatIP(dim)
+            self._index_type = "Flat"
+            index.add(embeddings)
+            return index
 
     def _build_bm25(self, texts: list[str]) -> None:
         """构建 BM25 索引（中文按字切分）"""
@@ -238,7 +299,7 @@ class DualRetriever:
 
     def __repr__(self) -> str:
         bm25_status = "built" if self._bm25 is not None else "none"
-        faiss_status = "built" if self._index is not None else "none"
+        faiss_status = f"{self._index_type}" if self._index is not None else "none"
         return (
             f"<DualRetriever docs={len(self._documents)} "
             f"BM25={bm25_status} FAISS={faiss_status}>"

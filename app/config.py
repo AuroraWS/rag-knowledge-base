@@ -29,6 +29,18 @@ class Settings(BaseSettings):
     top_k: int = 5
     rerank_top_k: int = 3
 
+    # ── FAISS 索引 ─────────────────────────────────────
+    faiss_index_type: str = "Flat"          # Flat / HNSW / IVF / HNSW_PQ
+    hnsw_m: int = 32                        # HNSW: M (每个节点的连接数)
+    hnsw_ef_construction: int = 200         # HNSW: 构建时的搜索宽度
+    hnsw_ef_search: int = 64                # HNSW: 搜索时的搜索宽度
+    ivf_nlist: int = 256                    # IVF: 聚类中心数
+    ivf_nprobe: int = 10                    # IVF: 搜索时探测的聚类数
+
+    # ── 文档切分 ─────────────────────────────────────
+    chunk_size: int = 500
+    chunk_overlap: int = 50
+
     # ── 数据目录 ─────────────────────────────────────
     knowledge_base_dir: str = "data/docs"
     faiss_index_dir: str = "data/faiss_index"

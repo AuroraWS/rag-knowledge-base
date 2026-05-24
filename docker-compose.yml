@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+  # ── FastAPI 后端 ──
+  backend:
+    build: .
+    container_name: rag-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./app:/app/app:ro
+      - ./data:/app/data
+      - ./frontend:/app/frontend:ro
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health').raise_for_status()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Gradio 前端 ──
+  frontend:
+    build: .
+    container_name: rag-frontend
+    ports:
+      - "7860:7860"
+    env_file:
+      - .env
+    volumes:
+      - ./frontend:/app/frontend:ro
+    environment:
+      - BACKEND_URL=http://backend:8000
+    command: python frontend/app.py
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped

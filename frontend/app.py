@@ -11,10 +11,12 @@ import os
 import gradio as gr
 import httpx
 
+from typing import Any
+
 # ── 后端地址（可通过环境变量覆盖） ────────────────
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
-TIMEOUT = 60.0
+TIMEOUT = 5.0
 
 
 # ── 通用 HTTP 工具函数 ────────────────────────────
@@ -22,34 +24,46 @@ TIMEOUT = 60.0
 
 def _get(path: str) -> dict:
     """向后端发送 GET 请求，返回 JSON 结果。"""
-    with httpx.Client(timeout=TIMEOUT) as client:
-        resp = client.get(f"{BACKEND_URL}{path}")
-        resp.raise_for_status()
-        return resp.json()
+    try:
+        with httpx.Client(timeout=TIMEOUT) as client:
+            resp = client.get(f"{BACKEND_URL}{path}")
+            resp.raise_for_status()
+            return resp.json()
+    except httpx.ConnectError:
+        raise RuntimeError(f"无法连接后端 ({BACKEND_URL})，请确认后端已启动: uvicorn app.main:app --reload")
 
 
-def _post(path: str, payload: dict = None) -> dict:
+def _post(path: str, payload: dict | None) -> dict:
     """向后端发送 POST 请求，返回 JSON 结果。"""
-    with httpx.Client(timeout=TIMEOUT) as client:
-        resp = client.post(f"{BACKEND_URL}{path}", json=payload or {})
-        resp.raise_for_status()
-        return resp.json()
+    try:
+        with httpx.Client(timeout=TIMEOUT) as client:
+            resp = client.post(f"{BACKEND_URL}{path}", json=payload or {})
+            resp.raise_for_status()
+            return resp.json()
+    except httpx.ConnectError:
+        raise RuntimeError(f"无法连接后端 ({BACKEND_URL})，请确认后端已启动: uvicorn app.main:app --reload")
 
 
-def _put(path: str, payload: dict = None) -> dict:
+def _put(path: str, payload: dict | None | None) -> dict:
     """向后端发送 PUT 请求，返回 JSON 结果。"""
-    with httpx.Client(timeout=TIMEOUT) as client:
-        resp = client.put(f"{BACKEND_URL}{path}", json=payload or {})
-        resp.raise_for_status()
-        return resp.json()
+    try:
+        with httpx.Client(timeout=TIMEOUT) as client:
+            resp = client.put(f"{BACKEND_URL}{path}", json=payload or {})
+            resp.raise_for_status()
+            return resp.json()
+    except httpx.ConnectError:
+        raise RuntimeError(f"无法连接后端 ({BACKEND_URL})，请确认后端已启动: uvicorn app.main:app --reload")
 
 
 def _delete(path: str) -> dict:
     """向后端发送 DELETE 请求，返回 JSON 结果。"""
-    with httpx.Client(timeout=TIMEOUT) as client:
-        resp = client.delete(f"{BACKEND_URL}{path}")
-        resp.raise_for_status()
-        return resp.json()
+    try:
+        with httpx.Client(timeout=TIMEOUT) as client:
+            resp = client.delete(f"{BACKEND_URL}{path}")
+            resp.raise_for_status()
+            return resp.json()
+    except httpx.ConnectError:
+        raise RuntimeError(f"无法连接后端 ({BACKEND_URL})，请确认后端已启动: uvicorn app.main:app --reload")
 
 
 # ═══════════════════════════════════════════════════════
@@ -66,7 +80,7 @@ def load_profile() -> str:
         return f"加载失败: {e}"
 
 
-def upload_doc(file: gr.File) -> str:
+def upload_doc(file: Any) -> str:
     """上传简历文件。"""
     if file is None:
         return "请先选择文件"
@@ -193,7 +207,7 @@ def build_applications_tab() -> gr.Blocks:
         apps_table = gr.Dataframe(
             headers=["公司", "岗位", "地点", "渠道", "状态", "投递日期"],
             label="投递记录",
-            row_count=(10, "dynamic"),
+            row_count=(10, "dynamic"), # type: ignore
             interactive=False,
         )
 
@@ -537,12 +551,12 @@ def build_settings_tab() -> gr.Blocks:
 CSS = """
 footer { display: none !important; }
 .gradio-container { max-width: 1200px !important; }
+button[role="tab"] { pointer-events: auto !important; position: relative; z-index: 100 !important; }
+div[role="tablist"] { position: relative; z-index: 50 !important; }
 """
 
 with gr.Blocks(
     title="智能招聘助手 v2.0",
-    theme=gr.themes.Soft(),
-    css=CSS,
 ) as app:
     gr.Markdown(
         "# 🏗 智能招聘助手 v2.0 — 求职 Agent 智能助手"
@@ -574,4 +588,4 @@ if __name__ == "__main__":
 
     # 允许在已有事件循环中运行 Gradio
     nest_asyncio.apply()
-    app.launch(server_name="0.0.0.0", server_port=7860, share=False)
+    app.launch(server_name="0.0.0.0", server_port=7860, share=False, theme=gr.themes.Soft(), css=CSS) # type: ignore

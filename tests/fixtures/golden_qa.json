@@ -1,0 +1,32 @@
+[
+  {
+    "query": "什么是FAISS？",
+    "expected_retrieval": ["FAISS", "向量检索"],
+    "expected_answer_contains": ["Facebook", "向量检索库", "相似性搜索"],
+    "latency_ms_max": 5000
+  },
+  {
+    "query": "RAG系统包含哪些关键技术？",
+    "expected_retrieval": ["RAG", "检索", "生成"],
+    "expected_answer_contains": ["检索", "生成", "大语言模型"],
+    "latency_ms_max": 5000
+  },
+  {
+    "query": "HNSW算法的优势是什么？",
+    "expected_retrieval": ["HNSW", "近似最近邻"],
+    "expected_answer_contains": ["近似最近邻", "搜索", "图结构"],
+    "latency_ms_max": 5000
+  },
+  {
+    "query": "BM25和向量检索有什么区别？",
+    "expected_retrieval": ["BM25", "向量检索"],
+    "expected_answer_contains": ["稀疏", "稠密", "语义"],
+    "latency_ms_max": 5000
+  },
+  {
+    "query": "Python有哪些机器学习应用？",
+    "expected_retrieval": ["Python", "机器学习", "数据科学"],
+    "expected_answer_contains": ["Python", "数据科学", "机器学习"],
+    "latency_ms_max": 5000
+  }
+]

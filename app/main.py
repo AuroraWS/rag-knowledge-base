@@ -13,6 +13,7 @@ from app.api import (
     applications_router,
     command_router,
     recommend_router,
+    rag_router,
 )
 
 app = FastAPI(
@@ -38,6 +39,7 @@ app.include_router(generate_router)
 app.include_router(applications_router)
 app.include_router(command_router)
 app.include_router(recommend_router)
+app.include_router(rag_router)
 
 
 # ── 健康检查 ──────────────────────────────────────
